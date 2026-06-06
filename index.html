@@ -5789,13 +5789,18 @@ async function submitConfiguration() {
   `;
 
   try {
-    await emailjs.send('service_pol88z5', 'template_composition', {
-      from_name: nom,
-      from_email: email,
-      composition: composition,
-      gravure: gravure || 'Aucune',
-      telephone: tel || 'Non renseigné',
-      reply_to: email
+    const dateStr = new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    await emailjs.send('service_pol88z5', 'template_sck3n5h', {
+      client_nom: nom,
+      client_email: email,
+      client_tel: tel || 'Non renseigné',
+      date: dateStr,
+      adresse: '— COMPOSITION PERSONNALISÉE —',
+      ville: '',
+      cp: '',
+      pays: '',
+      detail_commande: composition,
+      total: 'Sur devis'
     });
   } catch(err) {
     console.warn('EmailJS composition erreur:', err);
