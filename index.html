@@ -2610,7 +2610,7 @@
             <div class="conf-file-zone" onclick="document.getElementById('conf-photo-input').click()">
               <input type="file" id="conf-photo-input" accept="image/*" onchange="confPhotoSelected(this)">
               <p id="conf-photo-label">📷 Cliquez pour ajouter une photo</p>
-              <span>JPG, PNG — max 5 Mo</span>
+              <span>JPG, PNG — max 32 Mo</span>
             </div>
 
             <label>Votre email (pour recevoir la confirmation)</label>
@@ -5763,8 +5763,27 @@ function updateWatchSVG() {
 function confPhotoSelected(input) {
   const label = document.getElementById('conf-photo-label');
   if (input.files && input.files[0]) {
-    label.textContent = '✅ ' + input.files[0].name;
+    const file = input.files[0];
+    if (file.size > 32 * 1024 * 1024) {
+      label.textContent = '⚠ Fichier trop lourd (max 32 Mo)';
+      input.value = '';
+      return;
+    }
+    label.textContent = '✅ ' + file.name;
   }
+}
+
+async function uploadPhotoToImgBB(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  // Clé API ImgBB gratuite
+  const res = await fetch('https://api.imgbb.com/1/upload?key=a0070377328ee7f570c0007340ffb461', {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (data.success) return data.data.url;
+  return null;
 }
 
 async function submitConfiguration() {
@@ -5789,6 +5808,18 @@ async function submitConfiguration() {
   submitBtn.textContent = 'Envoi en cours...';
   submitBtn.disabled = true;
 
+  // Upload photo si présente
+  let photoUrl = 'Aucune photo';
+  const photoInput = document.getElementById('conf-photo-input');
+  if (photoInput.files && photoInput.files[0]) {
+    submitBtn.textContent = 'Upload photo...';
+    try {
+      const url = await uploadPhotoToImgBB(photoInput.files[0]);
+      if (url) photoUrl = url;
+    } catch(e) { photoUrl = 'Echec upload photo'; }
+    submitBtn.textContent = 'Envoi en cours...';
+  }
+
   const composition = `
     Boîtier : ${confData.boitier}
     Bracelet : ${confData.bracelet}
@@ -5802,6 +5833,7 @@ async function submitConfiguration() {
     Boîte : ${confData.boite}
     Gravure : ${gravure || 'Aucune'}
     Téléphone : ${tel || 'Non renseigné'}
+    📷 Photo boîte : ${photoUrl}
   `;
 
   try {
