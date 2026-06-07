@@ -2820,6 +2820,7 @@
       <button class="model-tab" onclick="openModelOverlay('Santos',this)">Santos</button>
       <button class="model-tab" onclick="openModelOverlay('Oyster',this)">Oyster</button>
       <button class="model-tab" onclick="openModelOverlay('Daytona',this)">Daytona</button>
+      <button class="model-tab" onclick="openModelOverlay('Datejust',this)">Datejust</button>
       <button class="model-tab" onclick="openModelOverlay('Day-Date',this)">Day-Date</button>
       <button class="model-tab" onclick="openModelOverlay('GMT',this)">GMT</button>
       <button class="model-tab" onclick="openModelOverlay('Royal Oak',this)">Royal Oak</button>
@@ -4175,7 +4176,25 @@ async function sbInsert(t,row){
 }
 async function sbUpdate(t,id,row){const r=await fetch(SB_URL+'/rest/v1/'+t+'?id=eq.'+id,{method:'PATCH',headers:{...SB_H,'Prefer':'return=representation'},body:JSON.stringify(row)});return r.ok?r.json():null}
 async function sbDelete(t,id){await fetch(SB_URL+'/rest/v1/'+t+'?id=eq.'+id,{method:'DELETE',headers:SB_H})}
-async function loadWatches(){watches=await sbGet('watches');renderGrid();renderAdminList();}
+async function loadWatches(){
+  watches=await sbGet('watches');
+  const hasDatejust=watches.some(w=>(w.brand||'').toLowerCase().includes('datejust')||(w.name||'').toLowerCase().includes('datejust'));
+  if(!hasDatejust){
+    const djRow={
+      id:'datejust-chocolate-rosegold-001',
+      brand:'Datejust',
+      name:'Chocolate Arabesque Rose Gold 39mm',
+      desc:'Cadran chocolat guilloché aux chiffres arabes, boîtier et bracelet Jubilée en acier et or rose. Lunette cannelée dorée. Mouvement automatique haute précision.',
+      price:649,
+      badge:'Exclusif',
+      img:'https://i.ibb.co/Tx1sP2Gb/datejust-arabic-chocolate-rosegold-39mm-montre-seiko-mod.png'
+    };
+    const res=await sbInsert('watches',djRow);
+    if(res&&res[0]){watches.push(res[0]);}else{watches.push(djRow);}
+  }
+  renderGrid();
+  renderAdminList();
+}
 let watches=[];
 let editingId=null;
 let currentImgData='';
