@@ -1240,6 +1240,15 @@
     font-weight: 400;
     color: var(--noir);
   }
+  .watch-price-old {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    color: var(--text-muted);
+    text-decoration: line-through;
+    margin-right: 0.4rem;
+  }
+  .watch-price-block { display: flex; align-items: baseline; gap: 0.25rem; flex-wrap: wrap; }
+  .watch-price-sale { color: #c0392b; }
 
   .btn-voir {
     font-size: 0.65rem;
@@ -1318,6 +1327,9 @@
   .modal-name { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 300; color: var(--noir); line-height: 1.15; margin-bottom: 1.25rem; }
   .modal-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.8; flex: 1; margin-bottom: 2rem; }
   .modal-price { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--noir); margin-bottom: 1.5rem; }
+  .modal-price-old { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--text-muted); text-decoration: line-through; margin-right: 0.5rem; }
+  .modal-price-block { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .modal-price-sale { color: #c0392b; }
 
   .btn-contact {
     width: 100%;
@@ -3944,8 +3956,17 @@ footer {
           <input type="number" id="f-price" placeholder="Ex: 4500">
         </div>
         <div class="form-group">
+          <label>Prix barré (€) — optionnel</label>
+          <input type="number" id="f-old-price" placeholder="Ex: 5200 (ancien prix)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label>Badge (optionnel)</label>
           <input type="text" id="f-badge" placeholder="Ex: Nouveauté, Rare…">
+        </div>
+        <div class="form-group" style="display:flex;align-items:flex-end;">
+          <small style="color:var(--text-muted);font-size:0.72rem;line-height:1.5;">Si un prix barré est renseigné, l'ancien prix apparaîtra rayé à côté du prix actuel.</small>
         </div>
       </div>
 
@@ -4427,6 +4448,9 @@ function renderGrid() {
       : '';
 
     const priceFormatted = Number(w.price).toLocaleString('fr-FR') + ' €';
+    const priceHtml = w.oldPrice
+      ? `<span class="watch-price-block"><span class="watch-price-old">${Number(w.oldPrice).toLocaleString('fr-FR')} €</span><span class="watch-price watch-price-sale">${priceFormatted}</span></span>`
+      : `<span class="watch-price">${priceFormatted}</span>`;
 
     card.innerHTML = `
       <div class="watch-img-wrap"${imgWrapStyle}>
@@ -4438,7 +4462,7 @@ function renderGrid() {
         <h3 class="watch-name">${w.name}</h3>
         <p class="watch-desc-short">${w.desc}</p>
         <div class="watch-footer">
-          <span class="watch-price">${priceFormatted}</span>
+          ${priceHtml}
           <div style="display:flex;gap:0.5rem">
             <button class="btn-voir" onclick="event.stopPropagation();openDetail('${w.id}')">Voir</button>
             <button class="btn-voir" style="background:var(--noir);color:white;border-color:var(--noir)" onclick="event.stopPropagation();addToCart('${w.id}')">+ Panier</button>
@@ -4531,6 +4555,7 @@ function startNewWatch() {
   document.getElementById('f-name').value = '';
   document.getElementById('f-desc').value = '';
   document.getElementById('f-price').value = '';
+  document.getElementById('f-old-price').value = '';
   document.getElementById('f-badge').value = '';
   document.getElementById('img-url').value = '';
   resetImgPreview();
@@ -4548,6 +4573,7 @@ function editWatch(id) {
   document.getElementById('f-name').value = w.name;
   document.getElementById('f-desc').value = w.desc;
   document.getElementById('f-price').value = w.price;
+  document.getElementById('f-old-price').value = w.oldPrice || '';
   document.getElementById('f-badge').value = w.badge || '';
 
   const preview = document.getElementById('img-preview');
@@ -4582,6 +4608,7 @@ async function saveWatch() {
   const name  = document.getElementById('f-name').value.trim();
   const desc  = document.getElementById('f-desc').value.trim();
   const price = document.getElementById('f-price').value.trim();
+  const oldPrice = document.getElementById('f-old-price').value.trim();
   const badge = document.getElementById('f-badge').value.trim();
 
   if (!brand || !name || !price) {
@@ -4598,12 +4625,12 @@ async function saveWatch() {
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
 
   if (editingId) {
-    const row = { brand, name, desc, price: parseFloat(price), badge, img: imgSrc };
+    const row = { brand, name, desc, price: parseFloat(price), oldPrice: oldPrice ? parseFloat(oldPrice) : null, badge, img: imgSrc };
     await sbUpdate('watches', editingId, row);
     const w = watches.find(x => x.id === editingId);
     if (w) Object.assign(w, row);
   } else {
-    const row = { id: Date.now().toString(), brand, name, desc, price: parseFloat(price), badge, img: imgSrc };
+    const row = { id: Date.now().toString(), brand, name, desc, price: parseFloat(price), oldPrice: oldPrice ? parseFloat(oldPrice) : null, badge, img: imgSrc };
     await sbInsert('watches', row);
     watches.push(row);
   }
@@ -4669,7 +4696,16 @@ function openDetail(id) {
   document.getElementById('modal-brand').textContent = w.brand;
   document.getElementById('modal-name').textContent = w.name;
   document.getElementById('modal-desc').textContent = w.desc;
-  document.getElementById('modal-price').textContent = priceFormatted;
+  const modalPriceEl = document.getElementById('modal-price');
+  if (w.oldPrice) {
+    modalPriceEl.outerHTML = `<div class="modal-price-block" id="modal-price"><span class="modal-price-old">${Number(w.oldPrice).toLocaleString('fr-FR')} €</span><span class="modal-price modal-price-sale">${priceFormatted}</span></div>`;
+  } else {
+    if (modalPriceEl.className.includes('block')) {
+      modalPriceEl.outerHTML = `<p class="modal-price" id="modal-price">${priceFormatted}</p>`;
+    } else {
+      modalPriceEl.textContent = priceFormatted;
+    }
+  }
   const img = document.getElementById('modal-img');
   const placeholder = document.getElementById('modal-placeholder');
   if (w.img) {
@@ -6139,6 +6175,9 @@ function openModelOverlay(modelName, tabEl) {
     empty.style.display = 'none';
     grid.innerHTML = filtered.map(w => {
       const price = Number(w.price).toLocaleString('fr-FR') + ' €';
+      const priceHtmlOv = w.oldPrice
+        ? `<span style="font-family:'Cormorant Garamond',serif;font-size:0.9rem;color:var(--text-muted);text-decoration:line-through;margin-right:4px">${Number(w.oldPrice).toLocaleString('fr-FR')} €</span><span class="model-ov-price" style="color:#c0392b">${price}</span>`
+        : `<span class="model-ov-price">${price}</span>`;
       const imgHtml = w.img
         ? `<img src="${w.img}" alt="${w.brand} ${w.name}" loading="lazy">`
         : `<div style="font-size:4rem;display:flex;align-items:center;justify-content:center;width:100%;height:100%">⌚</div>`;
@@ -6150,7 +6189,7 @@ function openModelOverlay(modelName, tabEl) {
           <h3 class="model-ov-name">${w.name}</h3>
           <p class="model-ov-desc">${(w.desc || '').substring(0,80)}${(w.desc||'').length>80?'…':''}</p>
           <div class="model-ov-footer">
-            <span class="model-ov-price">${price}</span>
+            ${priceHtmlOv}
             <button class="model-ov-btn" onclick="event.stopPropagation();addToCart('${w.id}')">+ Panier</button>
           </div>
         </div>
